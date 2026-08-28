@@ -17,7 +17,6 @@ default_args = {
 with DAG(
     dag_id = 'Hello World DAG',
     default_args = default_args,
-    retries = 3,
     start_date = datetime(2026, 8, 28),
     schedule='@hourly',
     catchup = False,
