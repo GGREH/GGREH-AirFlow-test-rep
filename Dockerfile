@@ -1,5 +1,14 @@
-FROM apache/airflow:latest
+FROM apache/airflow:3.2.2
 
-RUN pip install apache-airflow-providers-git --no-cache-dir pyarrow psycopg2-binary sqlalchemy
+RUN pip install --no-cache-dir \
+    apache-airflow-providers-google \
+    apache-airflow-providers-git \
+    google-cloud-bigquery \
+    google-cloud-bigquery-storage \
+    db-dtypes \
+    pyarrow \
+    pandas \
+    psycopg2-binary \
+    sqlalchemy
 
 COPY ./dags /opt/airflow/dags/
