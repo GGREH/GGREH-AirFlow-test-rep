@@ -2,3 +2,5 @@ helm.exe
 kind.exe
 kubectl.exe
 LICENSE
+values.yaml
+id_airflow_git*
