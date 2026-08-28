@@ -5,7 +5,7 @@ from airflow.decorators import dag, task
 from airflow.providers.google.cloud.hooks.bigquery import BigQueryHook
 
 GCP_PROJECT_ID = "project-4deacada-3830-4d03-80c"
-GCP_CONN_ID = "google_cloud_default"
+GCP_CONN_ID = "bigquery"
 
 @dag(
     dag_id="bigquery_fetch_data_dag",
