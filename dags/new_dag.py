@@ -15,7 +15,7 @@ default_args = {
 }
 
 with DAG(
-    dag_id = 'Hello World DAG',
+    dag_id = 'Hello_World_DAG',
     default_args = default_args,
     start_date = datetime(2026, 8, 28),
     schedule='@hourly',
