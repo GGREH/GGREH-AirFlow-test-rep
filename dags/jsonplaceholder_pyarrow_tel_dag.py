@@ -102,8 +102,15 @@ def jsonplaceholder_pyarrow_pipeline():
                 processed_at = EXCLUDED.processed_at;
         """)
 
+        # Выполняем CREATE TABLE с обработкой уже существующей таблицы
+        with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
+            try:
+                conn.execute(create_table_query)
+            except Exception as e:
+                print(f"Таблица уже создана: {e}")
+
+        # Выполняем вставку данных в транзакции
         with engine.begin() as conn:
-            conn.execute(create_table_query)
             conn.execute(insert_query, records)
 
         print(f"Успешно загружено/обновлено {len(records)} строк в таблице 'posts'.")
