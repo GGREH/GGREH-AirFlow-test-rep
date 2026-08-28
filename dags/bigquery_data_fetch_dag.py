@@ -26,15 +26,8 @@ def bigquery_pipeline():
         client = hook.get_client(project_id=GCP_PROJECT_ID)
 
         sql_query = """
-            SELECT 
-                name,
-                gender,
-                SUM(number) AS total_count
-            FROM `bigquery-public-data.usa_names.usa_1910_2013`
-            WHERE year >= 2000
-            GROUP BY name, gender
-            ORDER BY total_count DESC
-            LIMIT 20;
+            SELECT *
+            FROM `project-4deacada-3830-4d03-80c.post_stage.second_view`
         """
         
         print("Выполнение запроса в BigQuery...")
@@ -56,11 +49,10 @@ def bigquery_pipeline():
 
         df = pd.DataFrame(rows)
         print("=" * 60)
-        print("ТОП-20 ИМЕН ИЗ BIGQUERY:")
+        print("Записи из таблицы")
         print("=" * 60)
         print(df.to_string(index=False))
         print("=" * 60)
-        print(f"Всего людей в выборке: {df['total_count'].sum():,}")
 
     data = query_bigquery()
     analyze_and_display(data)
