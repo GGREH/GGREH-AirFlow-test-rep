@@ -19,7 +19,7 @@ def bigquery_pipeline():
     @task
     def query_bigquery() -> list[dict]:
         """
-        Запрос к BigQuery: выгружаем топ популярных имен из открытого датасета Google
+        Запрос к BigQuery: выгружаем 1 из локальной таблицы
         """
         print(f"Подключение к BigQuery через '{GCP_CONN_ID}'...")
         hook = BigQueryHook(gcp_conn_id=GCP_CONN_ID)
