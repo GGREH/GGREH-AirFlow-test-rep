@@ -2,7 +2,6 @@ from datetime import datetime, timezone
 import requests
 import pandas as pd
 from airflow.decorators import dag, task
-from airflow.models.param import Param
 from airflow.providers.google.cloud.hooks.bigquery import BigQueryHook
 from google.cloud import bigquery
 
@@ -16,46 +15,37 @@ NBU_API_BASE_URL = "https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange
 
 @dag(
     dag_id="nbu_exchange_rates_to_bigquery",
-    schedule="@hourly",
+    schedule=None,
     start_date=datetime(2026, 9, 1),
     catchup=False,
-    tags=["nbu", "rates", "bigquery", "api", "hourly", "parametrized"],
-    description="Выгрузка курсов валют НБУ за указанную дату и загрузка в BigQuery",
-    params={
-        "target_date": Param(
-            default="",
-            type=["null", "string"],
-            description="Дата для выгрузки в формате YYYY-MM-DD или YYYYMMDD (например, 2026-09-01). Оставьте пустым для использования текущей даты/даты запуска.",
-        )
-    },
+    tags=["nbu", "rates", "bigquery", "api", "worker", "child"],
+    description="Исполняющий DAG: выгружает курсы НБУ за переданный target_date и загружает в BigQuery",
 )
 def nbu_rates_pipeline():
 
     @task
     def extract_nbu_rates(**context) -> list[dict]:
         """
-        Получение курсов валют из API НБУ за переданный или рассчитанный день.
+        Получение курсов валют из API НБУ за переданный из управляющего DAG target_date.
         """
-        # 1. Получаем параметр из ручного запуска (Trigger with config)
-        param_date = context.get("params", {}).get("target_date")
+        # Получаем target_date из конфигурации dag_run (переданной через TriggerDagRunOperator)
+        dag_run_conf = context.get("dag_run").conf or {}
+        target_date = dag_run_conf.get("target_date")
 
-        if param_date:
-            # Очищаем от дефисов, если передали YYYY-MM-DD -> YYYYMMDD
-            clean_date = str(param_date).replace("-", "").strip()
-            date_query = clean_date
-            print(f"Используется переданная дата из параметров: {param_date} (в API: {date_query})")
-        else:
-            # Если параметр не задан, берем дату запуска Airflow (ds_nodash -> YYYYMMDD)
-            date_query = context.get("ds_nodash") or datetime.now(timezone.utc).strftime("%Y%m%d")
-            print(f"Параметр не задан, используется дата запуска: {date_query}")
+        if not target_date:
+            raise ValueError("Параметр 'target_date' не был передан в dag_run.conf!")
 
-        # Формируем запрос с параметром даты
+        # Очищаем от дефисов: YYYY-MM-DD -> YYYYMMDD
+        clean_date = str(target_date).replace("-", "").strip()
+
         query_params = {
-            "date": date_query,
+            "date": clean_date,
             "json": "",
         }
 
+        print(f"Получен target_date: '{target_date}' (для API НБУ: '{clean_date}')")
         print(f"Отправка запроса к API НБУ: {NBU_API_BASE_URL} с параметрами {query_params}")
+
         response = requests.get(NBU_API_BASE_URL, params=query_params, timeout=30)
         response.raise_for_status()
 
