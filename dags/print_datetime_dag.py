@@ -5,7 +5,7 @@ from airflow.operators.python import PythonOperator
 # Функция, которая будет выполнять основную работу
 def print_current_datetime():
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    print(f"Текущая дата и время: {current_time}")
+    print(f"Текущая дата и время, которая отличается от реальной на -3 часа: {current_time}")
 
 # Настройки по умолчанию для DAG
 default_args = {
