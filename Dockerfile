@@ -9,6 +9,6 @@ RUN pip install --no-cache-dir \
     pyarrow \
     pandas \
     psycopg2-binary \
-    sqlalchemy
+    sqlalchemy \
 
-COPY ./dags /opt/airflow/dags/
+    COPY ./dags /opt/airflow/dags/

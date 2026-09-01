@@ -32,9 +32,8 @@ def dataform_pipeline():
         workflow_invocation={
             "compilation_result": "{{ task_instance.xcom_pull('compile_dataform')['name'] }}",
             "invocation_config": {
-                # Запуск конкретного sqlx по тегу или имени таблицы:
-                "included_tags": [{"name": "stg_exchange_rates", "dataset": "nbu_data"}],
-                # "included_targets": [{"name": "stg_exchange_rates", "dataset": "nbu_data"}]
+                # Запуск sqlx файлов по тегу:
+                "included_tags": ["daily_transform"],
             },
         },
     )
