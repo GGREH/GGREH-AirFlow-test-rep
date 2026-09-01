@@ -16,7 +16,7 @@ NBU_API_BASE_URL = "https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange
 @dag(
     dag_id="nbu_exchange_rates_to_bigquery",
     schedule=None,
-    start_date=datetime(2026, 9, 1),
+    start_date=datetime(2025, 1, 1),
     catchup=False,
     tags=["nbu", "rates", "bigquery", "api", "worker", "child"],
     description="Исполняющий DAG: выгружает курсы НБУ за переданный target_date и загружает в BigQuery",

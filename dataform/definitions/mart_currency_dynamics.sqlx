@@ -1,0 +1,104 @@
+config {
+  type: "table",
+  schema: "nbu_data",
+  tags: ["daily_transform", "nbu_analytics"],
+  description: "Аналитическая витрина курсов валют НБУ с расчетом динамики, скользящих средних и трендов",
+  bigquery: {
+    partitionBy: "exchange_date",
+    clusterBy: ["currency_code"]
+  },
+  assertions: {
+    uniqueKey: ["currency_code", "exchange_date"],
+    nonNull: ["currency_code", "exchange_date", "current_rate"]
+  }
+}
+
+WITH deduped_raw AS (
+  SELECT
+    currency_id,
+    currency_name,
+    rate,
+    currency_code,
+    exchange_date,
+    fetched_at,
+    ROW_NUMBER() OVER (
+      PARTITION BY currency_code, exchange_date
+      ORDER BY fetched_at DESC
+    ) AS rn
+  FROM
+    `project-4deacada-3830-4d03-80c.nbu_data.exchange_rates`
+),
+
+base AS (
+  SELECT
+    currency_id,
+    currency_name,
+    currency_code,
+    exchange_date,
+    rate,
+    fetched_at,
+    
+    -- Курс за предыдущий день
+    LAG(rate, 1) OVER (
+      PARTITION BY currency_code 
+      ORDER BY exchange_date
+    ) AS prev_day_rate,
+    
+    -- 7-дневное скользящее среднее
+    AVG(rate) OVER (
+      PARTITION BY currency_code 
+      ORDER BY exchange_date 
+      ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
+    ) AS ma_7d,
+
+    -- 30-дневное скользящее среднее
+    AVG(rate) OVER (
+      PARTITION BY currency_code 
+      ORDER BY exchange_date 
+      ROWS BETWEEN 29 PRECEDING AND CURRENT ROW
+    ) AS ma_30d,
+
+    -- 30-дневный минимум и максимум
+    MIN(rate) OVER (
+      PARTITION BY currency_code 
+      ORDER BY exchange_date 
+      ROWS BETWEEN 29 PRECEDING AND CURRENT ROW
+    ) AS min_rate_30d,
+    
+    MAX(rate) OVER (
+      PARTITION BY currency_code 
+      ORDER BY exchange_date 
+      ROWS BETWEEN 29 PRECEDING AND CURRENT ROW
+    ) AS max_rate_30d
+  FROM
+    deduped_raw
+  WHERE
+    rn = 1
+)
+
+SELECT
+  exchange_date,
+  currency_code,
+  currency_name,
+  rate AS current_rate,
+  prev_day_rate,
+  ROUND(rate - prev_day_rate, 4) AS daily_diff_absolute,
+  ROUND(SAFE_DIVIDE(rate - prev_day_rate, prev_day_rate) * 100, 4) AS daily_change_percent,
+  ROUND(ma_7d, 4) AS moving_avg_7d,
+  ROUND(ma_30d, 4) AS moving_avg_30d,
+  min_rate_30d,
+  max_rate_30d,
+  CASE 
+    WHEN prev_day_rate IS NULL THEN 'NO_DATA'
+    WHEN rate > prev_day_rate THEN 'UP'
+    WHEN rate < prev_day_rate THEN 'DOWN'
+    ELSE 'STABLE'
+  END AS trend_direction,
+  CASE 
+    WHEN currency_code IN ('USD', 'EUR', 'GBP', 'CHF', 'PLN') THEN 'MAJOR_CURRENCY'
+    WHEN currency_code IN ('XAU', 'XAG', 'XPT', 'XPD') THEN 'PRECIOUS_METAL'
+    ELSE 'OTHER'
+  END AS currency_category,
+  CURRENT_TIMESTAMP() AS transformed_at
+FROM
+  base
