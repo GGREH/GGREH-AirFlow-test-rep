@@ -35,21 +35,26 @@ def nbu_rates_pipeline():
         if not target_date:
             raise ValueError("Параметр 'target_date' не был передан в dag_run.conf!")
 
-        # Очищаем от дефисов: YYYY-MM-DD -> YYYYMMDD
-        clean_date = str(target_date).replace("-", "").strip()
+        # Очищаем от кавычек, пробелов и дефисов: например, '"2026-08-20"' -> '20260820'
+        clean_date = str(target_date).strip("\"' \t\r\n").replace("-", "").strip()
 
         query_params = {
             "date": clean_date,
             "json": "",
         }
 
-        print(f"Получен target_date: '{target_date}' (для API НБУ: '{clean_date}')")
+        print(f"Получен target_date: {repr(target_date)} (для API НБУ: {repr(clean_date)})")
         print(f"Отправка запроса к API НБУ: {NBU_API_BASE_URL} с параметрами {query_params}")
 
         response = requests.get(NBU_API_BASE_URL, params=query_params, timeout=30)
         response.raise_for_status()
 
-        data = response.json()
+        try:
+            data = response.json()
+        except Exception as err:
+            print(f"Ошибка парсинга JSON. Ответ API НБУ (первые 300 символов):\n{response.text[:300]}")
+            raise err
+
         print(f"Успешно получено записей о валютах: {len(data)}")
         return data
 
