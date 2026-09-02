@@ -1,3 +1,4 @@
+from requests.sessions import default_headers
 from datetime import datetime
 from airflow.decorators import dag
 from airflow.models.param import Param
@@ -13,6 +14,13 @@ TRANSFORM_DAG_ID = "dataform_gcp_pipeline"
     start_date=datetime(2026, 9, 1),
     catchup=False,
     tags=["nbu", "controller", "trigger", "master"],
+    params={
+        "target_date": Param(
+            default=None,
+            type=["null", "string"],
+            description="Дата выгрузки (YYYY-MM-DD или YYYYMMDD). Оставьте пустым для выгрузки за дату запуска.",
+        )
+    }
 )
 def nbu_controller_pipeline():
 
