@@ -4,7 +4,7 @@ from airflow.models.param import Param
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 
 TARGET_DAG_ID = "nbu_exchange_rates_to_bigquery"
-TRANSFROM_DAG_ID = "dataform_gcp_pipeline"
+TRANSFORM_DAG_ID = "dataform_gcp_pipeline"
 
 
 @dag(
@@ -13,14 +13,6 @@ TRANSFROM_DAG_ID = "dataform_gcp_pipeline"
     start_date=datetime(2026, 9, 1),
     catchup=False,
     tags=["nbu", "controller", "trigger", "master"],
-    description="Управляющий DAG: запрашивает дату и триггерит исполняющий DAG nbu_exchange_rates_to_bigquery",
-    params={
-        "target_date": Param(
-            default="",
-            type=["null", "string"],
-            description="Дата выгрузки (YYYY-MM-DD или YYYYMMDD). Оставьте пустым для выгрузки за дату запуска.",
-        )
-    },
 )
 def nbu_controller_pipeline():
 
@@ -35,12 +27,12 @@ def nbu_controller_pipeline():
         reset_dag_run=True,
     )
 
-    trigger_dataform=TriggerDagRunOperator(
-        task_id="tregger_datafrom_transform",
-        trigger_dag_id=TRANSFROM_DAG_ID,
+    trigger_dataform = TriggerDagRunOperator(
+        task_id="trigger_dataform_transform",
+        trigger_dag_id=TRANSFORM_DAG_ID,
         wait_for_completion=True,
         poke_interval=10,
-        reset_dag_run=True
+        reset_dag_run=True,
     )
 
     trigger_nbu_etl >> trigger_dataform
