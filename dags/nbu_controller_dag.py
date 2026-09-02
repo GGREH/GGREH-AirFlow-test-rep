@@ -4,6 +4,7 @@ from airflow.models.param import Param
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 
 TARGET_DAG_ID = "nbu_exchange_rates_to_bigquery"
+TRANSFROM_DAG_ID = "dataform_gcp_pipeline"
 
 
 @dag(
@@ -34,7 +35,15 @@ def nbu_controller_pipeline():
         reset_dag_run=True,
     )
 
-    trigger_nbu_etl
+    trigger_dataform=TriggerDagRunOperator(
+        task_id="tregger_datafrom_transform",
+        trigger_dag_id=TRANSFROM_DAG_ID,
+        wait_for_completion=True,
+        poke_interval=10,
+        reset_dag_run=True
+    )
+
+    trigger_nbu_etl >> trigger_dataform
 
 
 nbu_controller_pipeline()
