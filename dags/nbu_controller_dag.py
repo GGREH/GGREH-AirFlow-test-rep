@@ -10,7 +10,7 @@ TRANSFORM_DAG_ID = "dataform_gcp_pipeline"
 @dag(
     dag_id="nbu_controller_dag",
     schedule="@daily",
-    start_date=datetime(2026, 9, 1),
+    start_date=datetime(2026, 9, 1, 11, 0, 0),
     catchup=False,
     tags=["nbu", "controller", "trigger", "master"],
     params={
