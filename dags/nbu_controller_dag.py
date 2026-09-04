@@ -1,4 +1,3 @@
-from requests.sessions import default_headers
 from datetime import datetime
 from airflow.decorators import dag
 from airflow.models.param import Param
