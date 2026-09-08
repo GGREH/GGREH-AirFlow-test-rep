@@ -76,7 +76,7 @@ def nbu_rates_pipeline():
         for ds_id in ["nbu_staging", "nbu_core", "nbu_reporting"]:
             dataset_ref = bigquery.DatasetReference(GCP_PROJECT_ID, ds_id)
             dataset = bigquery.Dataset(dataset_ref)
-            dataset.location = "US"
+            dataset.location = "us-central1"
             client.create_dataset(dataset, exists_ok=True)
 
         dataset_ref = bigquery.DatasetReference(GCP_PROJECT_ID, BQ_DATASET_ID)
