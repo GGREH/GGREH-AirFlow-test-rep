@@ -1,7 +1,0 @@
-config {
-  type: "declaration",
-  database: "project-4deacada-3830-4d03-80c",
-  schema: "nbu_staging",
-  name: "raw_exchange_rates",
-  description: "Сырые курсы валют НБУ из API (staging слой), загружаемые через Airflow"
-}
