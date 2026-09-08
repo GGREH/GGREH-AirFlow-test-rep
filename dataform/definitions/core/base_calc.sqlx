@@ -1,0 +1,52 @@
+config {
+    type: "view",
+    schema: "nbu_core",
+    name: "base_calc",
+    tags: ["daily_transform", "nbu_analytics"],
+    description: "Расчет базовых оконных метрик: предыдущий день, 7d/30d MA, min/max (Core слой)"
+}
+
+SELECT
+  currency_id,
+  currency_name,
+  currency_code,
+  exchange_date,
+  rate,
+  fetched_at,
+  
+  -- Курс за предыдущий день
+  LAG(rate, 1) OVER (
+    PARTITION BY currency_code 
+    ORDER BY exchange_date
+  ) AS prev_day_rate,
+  
+  -- 7-дневное скользящее среднее
+  AVG(rate) OVER (
+    PARTITION BY currency_code 
+    ORDER BY exchange_date 
+    ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
+  ) AS ma_7d,
+
+  -- 30-дневное скользящее среднее
+  AVG(rate) OVER (
+    PARTITION BY currency_code 
+    ORDER BY exchange_date 
+    ROWS BETWEEN 29 PRECEDING AND CURRENT ROW
+  ) AS ma_30d,
+
+  -- 30-дневный минимум и максимум
+  MIN(rate) OVER (
+    PARTITION BY currency_code 
+    ORDER BY exchange_date 
+    ROWS BETWEEN 29 PRECEDING AND CURRENT ROW
+  ) AS min_rate_30d,
+  
+  MAX(rate) OVER (
+    PARTITION BY currency_code 
+    ORDER BY exchange_date 
+    ROWS BETWEEN 29 PRECEDING AND CURRENT ROW
+  ) AS max_rate_30d
+FROM
+  ${ref("deduped_raw")}
+WHERE
+  rn = 1

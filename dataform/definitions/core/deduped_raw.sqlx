@@ -1,0 +1,21 @@
+config {
+    type: "view",
+    schema: "nbu_core",
+    name: "deduped_raw",
+    tags: ["daily_transform", "nbu_analytics"],
+    description: "Очищенные и дедуплицированные данные курсов валют (Core слой)"
+}
+
+SELECT
+  r030 AS currency_id,
+  txt AS currency_name,
+  rate,
+  cc AS currency_code,
+  PARSE_DATE('%d.%m.%Y', exchangedate) AS exchange_date,
+  loaded_at AS fetched_at,
+  ROW_NUMBER() OVER (
+    PARTITION BY cc, PARSE_DATE('%d.%m.%Y', exchangedate) 
+    ORDER BY loaded_at DESC
+  ) AS rn
+FROM
+  ${ ref("raw_exchange_rates") }

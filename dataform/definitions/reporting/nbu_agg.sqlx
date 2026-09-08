@@ -1,0 +1,37 @@
+config {
+  type: "table",
+  schema: "nbu_reporting",
+  name: "nbu_agg",
+  tags: ["daily_transform", "nbu_analytics", "reporting"],
+  description: "Аналитическая витрина курсов валют НБУ (Reporting слой) с расчетом динамики, скользящих средних и трендов",
+  bigquery: {
+    partitionBy: "exchange_date"
+  }
+}
+
+SELECT
+  exchange_date,
+  currency_code,
+  currency_name,
+  rate AS current_rate,
+  prev_day_rate,
+  ROUND(rate - prev_day_rate, 4) AS daily_diff_absolute,
+  ROUND(SAFE_DIVIDE(rate - prev_day_rate, prev_day_rate) * 100, 4) AS daily_change_percent,
+  ROUND(ma_7d, 4) AS moving_avg_7d,
+  ROUND(ma_30d, 4) AS moving_avg_30d,
+  min_rate_30d,
+  max_rate_30d,
+  CASE 
+    WHEN prev_day_rate IS NULL THEN 'NO_DATA'
+    WHEN rate > prev_day_rate THEN 'UP'
+    WHEN rate < prev_day_rate THEN 'DOWN'
+    ELSE 'STABLE'
+  END AS trend_direction,
+  CASE 
+    WHEN currency_code IN ('USD', 'EUR', 'GBP', 'CHF', 'PLN') THEN 'MAJOR_CURRENCY'
+    WHEN currency_code IN ('XAU', 'XAG', 'XPT', 'XPD') THEN 'PRECIOUS_METAL'
+    ELSE 'OTHER'
+  END AS currency_category,
+  CURRENT_TIMESTAMP() AS transformed_at
+FROM
+  ${ref("base_calc")}
