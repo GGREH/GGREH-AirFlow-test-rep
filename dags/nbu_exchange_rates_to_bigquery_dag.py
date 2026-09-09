@@ -5,10 +5,10 @@ from airflow.decorators import dag, task
 from airflow.providers.google.cloud.hooks.bigquery import BigQueryHook
 from google.cloud import bigquery
 
-# Конфигурация GCP и BigQuery (Operational / Temp слой)
+# Конфигурация GCP и BigQuery (Staging слой: содержит tmp_nbu_kurs_data и stg_nbu_kurs)
 GCP_PROJECT_ID = "project-4deacada-3830-4d03-80c"
 GCP_CONN_ID = "google_cloud_default"
-BQ_DATASET_ID = "nbu_operational"
+BQ_DATASET_ID = "nbu_staging"
 BQ_TABLE_ID = "tmp_nbu_kurs_data"
 NBU_API_BASE_URL = "https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange"
 
@@ -18,8 +18,8 @@ NBU_API_BASE_URL = "https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange
     schedule=None,
     start_date=datetime(2025, 1, 1),
     catchup=False,
-    tags=["nbu", "operational", "raw", "bigquery", "api", "worker", "child"],
-    description="Исполняющий DAG: выгружает сырые курсы НБУ за target_date во временную операционную таблицу BigQuery",
+    tags=["nbu", "staging", "tmp", "raw", "bigquery", "api", "worker", "child"],
+    description="Исполняющий DAG: выгружает сырые курсы НБУ за target_date во временную таблицу nbu_staging.tmp_nbu_kurs_data",
 )
 def nbu_rates_pipeline():
 
@@ -59,11 +59,11 @@ def nbu_rates_pipeline():
     @task
     def load_raw_to_bigquery(raw_data: list[dict], **context) -> None:
         """
-        Прямая загрузка сырых данных (raw) в BigQuery operational слой (tmp_nbu_kurs_data).
-        Инкрементальный merge в staging слой выполняется Dataform.
+        Прямая загрузка сырых данных во временную таблицу nbu_staging.tmp_nbu_kurs_data.
+        Инкрементальный merge в nbu_staging.stg_nbu_kurs выполняется Dataform.
         """
         if not raw_data:
-            print("Нет сырых записей для загрузки в BigQuery operational.")
+            print("Нет сырых записей для загрузки в BigQuery staging.")
             return
 
         dag_run_conf = context.get("dag_run").conf or {}
@@ -72,8 +72,8 @@ def nbu_rates_pipeline():
         hook = BigQueryHook(gcp_conn_id=GCP_CONN_ID)
         client: bigquery.Client = hook.get_client(project_id=GCP_PROJECT_ID)
 
-        # Проверяем и создаем все датасеты DWH
-        for ds_id in ["nbu_operational", "nbu_staging", "nbu_core", "nbu_reporting"]:
+        # Проверяем и создаем 3 датасета DWH (staging, core, reporting)
+        for ds_id in ["nbu_staging", "nbu_core", "nbu_reporting"]:
             dataset_ref = bigquery.DatasetReference(GCP_PROJECT_ID, ds_id)
             dataset = bigquery.Dataset(dataset_ref)
             dataset.location = "us-central1"
@@ -82,14 +82,14 @@ def nbu_rates_pipeline():
         dataset_ref = bigquery.DatasetReference(GCP_PROJECT_ID, BQ_DATASET_ID)
         table_ref = dataset_ref.table(BQ_TABLE_ID)
 
-        # Схема сырой таблицы
+        # Схема сырой временной таблицы
         schema = [
             bigquery.SchemaField("r030", "INTEGER", mode="NULLABLE", description="Код валюты из API НБУ"),
             bigquery.SchemaField("txt", "STRING", mode="NULLABLE", description="Название валюты"),
             bigquery.SchemaField("rate", "FLOAT", mode="REQUIRED", description="Курс валюты"),
             bigquery.SchemaField("cc", "STRING", mode="REQUIRED", description="Буквенный код валюты (USD, EUR...)"),
             bigquery.SchemaField("exchangedate", "STRING", mode="REQUIRED", description="Дата курса в формате API (DD.MM.YYYY)"),
-            bigquery.SchemaField("loaded_at", "TIMESTAMP", mode="REQUIRED", description="Время загрузки в operational"),
+            bigquery.SchemaField("loaded_at", "TIMESTAMP", mode="REQUIRED", description="Время загрузки во временную таблицу"),
             bigquery.SchemaField("target_date", "STRING", mode="NULLABLE", description="Целевая дата запроса"),
         ]
 
@@ -106,11 +106,11 @@ def nbu_rates_pipeline():
             write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,
         )
 
-        print(f"Загрузка {len(df)} сырых строк в `{GCP_PROJECT_ID}.{BQ_DATASET_ID}.{BQ_TABLE_ID}` (Operational)...")
+        print(f"Загрузка {len(df)} сырых строк в `{GCP_PROJECT_ID}.{BQ_DATASET_ID}.{BQ_TABLE_ID}`...")
         job = client.load_table_from_dataframe(df, table_ref, job_config=job_config)
         job.result()
 
-        print(f"Успешно загружено {job.output_rows} строк в BigQuery operational `{BQ_DATASET_ID}.{BQ_TABLE_ID}`!")
+        print(f"Успешно загружено {job.output_rows} строк в BigQuery `{BQ_DATASET_ID}.{BQ_TABLE_ID}`!")
 
     raw_rates = extract_nbu_rates()
     load_raw_to_bigquery(raw_rates)
