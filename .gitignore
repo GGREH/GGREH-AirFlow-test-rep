@@ -1,6 +1,8 @@
+.gitignore
 helm.exe
 kind.exe
 kubectl.exe
 LICENSE
 values.yaml
 airflow-git-key*
+docs
