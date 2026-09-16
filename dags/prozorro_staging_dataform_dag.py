@@ -16,33 +16,33 @@ STAGE_WORKSPACE_PATH = (
 )
 
 @dag(
-    dag_id = "prozorro_daraform_staging_pipeline",
+    dag_id="prozorro_dataform_staging_pipeline",
     start_date=datetime(2026, 9, 1, 11, 0, 0),
     schedule=None,
     catchup=False,
-    tags = ["prozorro", "dataform", "staging", "gcp", "worker", "child"],
+    tags=["prozorro", "dataform", "staging", "gcp", "worker", "child"],
     description="Исполняющий DAG 1: инкрементальная загрузка данных из prozorro (tmp) в prozorro_staging",
 )
 def prozorro_dataform_staging_pipeline():
-    complise_staging = DataformCreateCompilationResultOperator(
-        task_id = "compile_staging_dataform",
-        project_id = PROJECT_ID,
-        region = REGION,
-        repository_id = STAGE_REPOSITORY_ID,
-        compilation_result = {
+    compile_staging = DataformCreateCompilationResultOperator(
+        task_id="compile_staging_dataform",
+        project_id=PROJECT_ID,
+        region=REGION,
+        repository_id=STAGE_REPOSITORY_ID,
+        compilation_result={
             "workspace": STAGE_WORKSPACE_PATH
         },
     )
     invoke_staging = DataformCreateWorkflowInvocationOperator(
-        task_id = "invoke_staging_dataform",
-        project_id = PROJECT_ID,
-        region = REGION,
-        repository_id = STAGE_REPOSITORY_ID,
-        workflow_invocation = {
-            "compilation_result": "{{ task_instance.xcom_pull('compile_staging_dataform'['name']) }}",
+        task_id="invoke_staging_dataform",
+        project_id=PROJECT_ID,
+        region=REGION,
+        repository_id=STAGE_REPOSITORY_ID,
+        workflow_invocation={
+            "compilation_result": "{{ task_instance.xcom_pull('compile_staging_dataform')['name'] }}",
         },
     )
 
-    complise_staging >> invoke_staging
+    compile_staging >> invoke_staging
 
 prozorro_dataform_staging_pipeline()

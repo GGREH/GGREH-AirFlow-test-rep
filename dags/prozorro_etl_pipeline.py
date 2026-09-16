@@ -1,12 +1,9 @@
-from IPython.core import display_functions
-from bigquery_data_fetch_dag import bigquery_pipeline
-from asyncio import taskgroups
 from datetime import datetime, timezone
 import requests
 import pandas as pd
 from airflow.decorators import dag, task
 from airflow.providers.google.cloud.hooks.bigquery import BigQueryHook
-from google.could import bigquery
+from google.cloud import bigquery
 
 GCP_PROJECT_ID = "project-4deacada-3830-4d03-80c"
 GCP_CONN_ID = "google_cloud_default"
@@ -15,7 +12,7 @@ BQ_TABLE_ID = "tmp_prozorro_tenders_data"
 PROZORRO_API_BASE_URL = "https://public.api.openprocurement.org/api/2.5/tenders"
 
 @dag(
-    dag_id = "prozorro_etl_pipeline",
+    dag_id="prozorro_etl_pipeline",
     schedule=None,
     start_date=datetime(2026, 9, 1, 11, 0, 0),
     catchup=False,
@@ -64,7 +61,7 @@ def prozorro_etl_pipeline():
             print("Нет сырых записей для загрузки в BigQuery staging.")
             return
         
-        dag_run_conf = context.get("dag_run".conf) or {}
+        dag_run_conf = context.get("dag_run").conf or {}
         target_date_val = str(dag_run_conf.get("target_date", "")).strip("\"' \t\r\n")
 
         hook = BigQueryHook(gcp_conn_id=GCP_CONN_ID)
@@ -77,7 +74,7 @@ def prozorro_etl_pipeline():
             client.create_dataset(dataset, exists_ok=True)
 
         dataset_ref = bigquery.DatasetReference(GCP_PROJECT_ID, BQ_DATASET_ID)
-        table_ref = bigquery.table(BQ_TABLE_ID)
+        table_ref = dataset_ref.table(BQ_TABLE_ID)
 
         schema = [
             bigquery.SchemaField("id", "STRING", mode="REQUIRED", description="ID тендера в ProZorro"),
@@ -101,12 +98,12 @@ def prozorro_etl_pipeline():
 
         job_config = bigquery.LoadJobConfig(
             schema=schema,
-            write_disposition=bigquery.writeDispotision.WRITE_TRUNCATE,
+            write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,
         )
 
         print(f"Загрузка {len(df)} сырых строк в `{GCP_PROJECT_ID}.{BQ_DATASET_ID}.{BQ_TABLE_ID}`...")
         job = client.load_table_from_dataframe(df, table_ref, job_config=job_config)
-        job.results()
+        job.result()
 
         print(f"Успешно загружено {job.output_rows} строк в BigQuery `{BQ_DATASET_ID}.{BQ_TABLE_ID}`!")
 
