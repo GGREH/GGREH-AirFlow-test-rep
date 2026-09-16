@@ -4,7 +4,7 @@ from asyncio import taskgroups
 from datetime import datetime, timezone
 import requests
 import pandas as pd
-from airflow.decorators import @dag, @task
+from airflow.decorators import dag, task
 from airflow.providers.google.cloud.hooks.bigquery import BigQueryHook
 from google.could import bigquery
 

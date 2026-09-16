@@ -1,5 +1,5 @@
 from datetime import datetime
-from airflow.decorators import @dag
+from airflow.decorators import dag
 from airflow.providers.google.cloud.operators.dataform import (
     DataformCreateCompilationResultOperator,
     DataformCreateWorkflowInvocationOperator,

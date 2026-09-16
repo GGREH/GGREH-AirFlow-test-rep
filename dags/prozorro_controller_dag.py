@@ -1,6 +1,6 @@
 # pyrefly: ignore [missing-import]
 from datetime import datetime
-from airflow.decorators import @dag
+from airflow.decorators import dag
 from airflow.models.param import Param
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 
@@ -8,9 +8,9 @@ LOAD_DAG_ID = "prozorro_etl_pipeline"
 DATAFORM_STAGING_DAG_ID = "prozorro_dataform_staging_pipeline"
 DATAFORM_TRANSFORM_DAG_ID = "prozorro_dataform_transform_pipeline"
 
-@dag(
+dag(
     dag_id ="prozorro_controller_dag",
-    schedule="@daily",
+    schedule="daily",
     start_date=datetime(2026, 9, 1, 11, 0, 0),
     catchup=False,
     tags=["prozorro", "controller", "trigger", "master"],
